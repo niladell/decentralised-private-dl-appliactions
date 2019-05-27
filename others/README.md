@@ -1,0 +1,1 @@
+This folder holds extra resources used used during the development of the project or showcase examples not directly liked to the main core of the project—mainly coming from Openmined and Syft.
