@@ -1,3 +1,7 @@
+# Whitelist ALL data folders
+data/
+*data/
+
 # Editors
 .vscode/
 .idea/
