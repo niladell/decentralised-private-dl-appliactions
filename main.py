@@ -27,7 +27,8 @@ if use_cuda:
 device = torch.device("cuda" if use_cuda else "cpu")
 print(device)
 batch_size = 32
-
+epochs = 30
+log_iteration = 1000
 
 traindataloader, testdataloader = CIFAR.get_dataloaders(batch_size)
 net = CIFAR.CifarNet().to(device)
@@ -43,7 +44,7 @@ train(model=net,
       criterion=criterion,
       optimizer=optimizer,
       device=device,
-      epochs=15, log_iteration = 1000)
+      epochs=epochs, log_iteration=log_iteration)
 training_time = time.time() - training_time
 
 _, accuracy = test(net, testdataloader, device)
@@ -70,7 +71,7 @@ train_federate_simple(model=net,
       criterion=criterion,
       optimizer=optimizer,
       device=device,
-      epochs=15, log_iteration = 1000)
+      epochs=epochs,log_iteration=log_iteration)
 training_time = time.time() - training_time
 
 _, accuracy = test(net, testdataloader, device)
