@@ -1,5 +1,7 @@
 """
-The following test checks if a test federated learning model works
+The following test checks if a test federated learning model works.
+If this fails there has probably been a major change on Syft or you are using
+a broken verion of it.
 """
 
 import torch

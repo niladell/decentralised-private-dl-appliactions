@@ -1,11 +1,18 @@
 import torch
+import torch.nn.functional as func
+import syft as sy
+import logging
 
-def train(model, dataloader, criterion, optimizer, epochs=10, log_iteration = 1000):
+logger = logging.getLogger(__name__)
+
+def train(model, dataloader, criterion, optimizer, device=None, epochs=10, log_iteration = 1000):
     for epoch in range(epochs):
 
         running_loss = 0.0
         for i, data in enumerate(dataloader, 0):
             inputs, labels = data
+            if device:
+                inputs, labels = inputs.to(device), labels.to(device)
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -27,7 +34,7 @@ def train(model, dataloader, criterion, optimizer, epochs=10, log_iteration = 10
 
 
 
-def train_federate_simple(model, dataloader, criterion, optimizer, epochs=10, log_iteration = 1000):
+def train_federate_simple(model, dataloader, criterion, optimizer, device=None, epochs=10, log_iteration = 1000):
     """This function trains a model in a federate fashion. Despite that the training is performed
        in serie, meaning, the training is done one worker (user/party) at a time.
 
@@ -46,7 +53,9 @@ def train_federate_simple(model, dataloader, criterion, optimizer, epochs=10, lo
         running_loss = 0.0
         for i, data in enumerate(dataloader, 0):
             inputs, labels = data
-            model.send(data.location)
+            if device:
+                inputs, labels = inputs.to(device), labels.to(device)
+            model.send(inputs.location)
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -59,7 +68,7 @@ def train_federate_simple(model, dataloader, criterion, optimizer, epochs=10, lo
 
             model.get()
 
-            running_loss += loss.item()
+            running_loss += loss.get().detach().cpu().numpy()
             if log_iteration is not None:  # Is this the best way?
                 if i % log_iteration == log_iteration - 1:
                     print('[%d, %5d] loss: %.3f' %
@@ -68,6 +77,26 @@ def train_federate_simple(model, dataloader, criterion, optimizer, epochs=10, lo
 
     print('Finished Training')
 
+
+def test(model, dataloader, device=None):
+    model.eval()
+    test_loss = 0
+    correct = 0
+    with torch.no_grad():
+        for data, target in dataloader:
+            if device:
+                data, target = data.to(device), target.to(device)
+            output = model(data)
+            test_loss += func.nll_loss(output, target, reduction='sum').item() # sum up batch loss
+            pred = output.argmax(1, keepdim=True) # get the index of the max log-probability
+            correct += pred.eq(target.view_as(pred)).sum().item()
+
+    test_loss /= len(dataloader.dataset)
+    accuracy = 100. * correct / len(dataloader.dataset)
+
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+        test_loss, correct, len(dataloader.dataset), accuracy))
+    return test_loss, accuracy
 
 # def train_federate_simple(model, dataloader, criterion, optimizer, aggregate_method,
 #                           epochs=10, workers_iterations=5, log_iteration = 1000):

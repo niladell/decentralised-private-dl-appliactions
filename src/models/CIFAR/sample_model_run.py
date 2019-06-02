@@ -84,10 +84,10 @@ optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
 
 ## Training
-import os  # TODO Remove this (it is a bit stupid, but so far is just protoptyping so...)
+import os
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
 print(parentdir)
-from core.training_fn import train
+from core import train
 
 train(model=net, dataloader=trainloader, criterion=criterion, optimizer=optimizer)
