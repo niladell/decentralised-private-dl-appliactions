@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-
+torch.set_default_tensor_type(torch.FloatTensor) # TODO testing
 class DeepSEA(nn.Module):
     def __init__(self, sequence_length, n_genomic_features):
         """
@@ -36,7 +36,7 @@ class DeepSEA(nn.Module):
             nn.Dropout(p=0.5))
 
         reduce_by = conv_kernel_size - 1
-        pool_kernel_size = float(pool_kernel_size)
+        # pool_kernel_size = float(pool_kernel_size)
         self.n_channels = int(
             np.floor(
                 (np.floor(
@@ -46,14 +46,14 @@ class DeepSEA(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(960 * self.n_channels, n_genomic_features),
             nn.ReLU(inplace=True),
-            nn.Linear(n_genomic_features, n_genomic_features),
-            nn.Sigmoid())
+            nn.Linear(n_genomic_features, n_genomic_features))
+            # nn.Sigmoid())
 
     def forward(self, x):
         """Forward propagation of a batch.
         """
         out = self.conv_net(x)
-        reshape_out = out.view(out.size(0), 960 * self.n_channels)
+        reshape_out = out.view(out.shape[0], 960 * self.n_channels)
         predict = self.classifier(reshape_out)
         return predict
 
@@ -61,7 +61,9 @@ def criterion():
     """
     The criterion the model aims to minimize.
     """
-    return nn.BCELoss()
+    # return nn.BCELoss()
+    return nn.BCEWithLogitsLoss()
+
 
 def get_optimizer(lr):
     """
@@ -71,4 +73,4 @@ def get_optimizer(lr):
     until the model has been initialized.
     """
     return (torch.optim.SGD,
-            {"lr": lr, "weight_decay": 1e-6, "momentum": 0.9})
+            {"lr": lr})

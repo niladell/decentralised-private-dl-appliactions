@@ -38,18 +38,18 @@ net = CIFAR.CifarNet().to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.01)
 
-training_time = time.time()
-train(model=net,
-      dataloader=traindataloader,
-      criterion=criterion,
-      optimizer=optimizer,
-      device=device,
-      epochs=epochs, log_iteration=log_iteration)
-training_time = time.time() - training_time
-
-_, accuracy = test(net, testdataloader, device)
-
-print(f' --- > Test accuracy: {accuracy} -- Training time {training_time}')
+# training_time = time.time()
+# train(model=net,
+#       dataloader=traindataloader,
+#       criterion=criterion,
+#       optimizer=optimizer,
+#       device=device,
+#       epochs=epochs, log_iteration=log_iteration)
+# training_time = time.time() - training_time
+#
+# _, accuracy = test(net, testdataloader, device)
+#
+# print(f' --- > Test accuracy: {accuracy} -- Training time {training_time}')
 
 #----- FEDERATE FROM HERE
 

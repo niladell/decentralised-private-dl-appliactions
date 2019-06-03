@@ -27,6 +27,8 @@ import syft as sy
 hook = sy.TorchHook(torch)
 logger = logging.getLogger("selene")
 
+torch.set_default_tensor_type(torch.FloatTensor) # TODO testing
+
 
 class TrainModel(selene_sdk.TrainModel):
 
@@ -55,7 +57,7 @@ class TrainModel(selene_sdk.TrainModel):
         """
         Constructs a new `TrainModel` object.
         """
-        self.model = model
+        self.model = model.type(torch.FloatTensor)
         self.sampler = data_sampler
         self.criterion = loss_criterion
         self.optimizer = optimizer_class(
@@ -153,44 +155,46 @@ class TrainModel(selene_sdk.TrainModel):
             sorted([x for x in self._validation_metrics.metrics.keys()])))
 
     def train(self):
-            """
-            Trains the model on a batch of data.
+        """
+        Trains the model on a batch of data.
 
-            Returns
-            -------
-            float
-                The training loss.
+        Returns
+        -------
+        float
+            The training loss.
 
-            """
-            print('WE DID IT!') # * Some brightness
-            self.model.train()
-            self.sampler.set_mode("train")
+        """
+        logger.debug('yup! It\'s training') # * Some brightness
+        self.model.train()
+        self.sampler.set_mode("train")
 
-            inputs, targets = self._get_batch()
+        inputs, targets = self._get_batch()
 
-            if self.use_cuda:
-                inputs = inputs.cuda()
-                targets = targets.cuda()
-            # TODO Change to this:
-            # if device:
-            #     inputs, labels = inputs.to(device), labels.to(device)
+        if self.use_cuda:
+            inputs = inputs.cuda()
+            targets = targets.cuda()
 
-            # ! FEDERATE
-            self.model.send(inputs.location)
+        # TODO Change to this:
+        # if device:
+        #     inputs, labels = inputs.to(device), labels.to(device)
 
-            # ? This is probably not needed
-            # inputs = Variable(inputs)
-            # targets = Variable(targets)
+        # ! FEDERATE
+        self.model._send(inputs.location) # Is this needed¿? -- normal .send() did not work
 
-            predictions = self.model(inputs.transpose(1, 2))
-            loss = self.criterion(predictions, targets)
+        # ? This is probably not needed
+        # inputs = Variable(inputs)
+        # targets = Variable(targets)
+        self.optimizer.zero_grad()
 
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+        inputs = inputs.transpose(1, 2)
+        predictions = self.model(inputs)
+        loss = self.criterion(predictions, targets)
 
-            self.model.get()
-            return loss.get().detach().cpu().numpy() # loss.item() # TODO < Check why not working
+        loss.backward()
+        self.optimizer.step()
+
+        self.model.get()
+        return loss.get().detach().cpu().numpy() # loss.item() # TODO < Check why not working
 
     def _get_batch(self):
             """
@@ -207,9 +211,10 @@ class TrainModel(selene_sdk.TrainModel):
             batch_sequences, batch_targets = self.sampler.sample(
                 batch_size=self.batch_size)
             # TODO Create dedicated sampler
-            batch_sequences = torch.tensor(batch_sequences, requires_grad=True)
-            batch_targets = torch.tensor(batch_targets, requires_grad=True)
+            batch_sequences = torch.tensor(batch_sequences, requires_grad=True, dtype=torch.float32)
+            batch_targets = torch.tensor(batch_targets, requires_grad=True, dtype=torch.float32)
 
+            # ! TEMPORAL WORKAROUND!
             try:
                 batch_sequences = batch_sequences.send(
                                         self.workers_list[self.current_worker])

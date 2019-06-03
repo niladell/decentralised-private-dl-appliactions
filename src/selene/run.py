@@ -1,7 +1,7 @@
 import selene_sdk as sel
+import utils
 
 import train_model
-import utils
 sel.TrainModel = train_model.TrainModel
 sel.utils.NonStrandSpecific = utils.NonStrandSpecific
 
