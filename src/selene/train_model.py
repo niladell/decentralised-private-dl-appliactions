@@ -30,6 +30,13 @@ logger = logging.getLogger("selene")
 torch.set_default_tensor_type(torch.FloatTensor) # TODO testing
 
 
+def eval_addon(self, f):
+    def wrapper():
+        f()
+        self.evaluate()
+        return None
+    return wrapper
+
 class TrainModel(selene_sdk.TrainModel):
 
     def __init__(self,
@@ -153,6 +160,8 @@ class TrainModel(selene_sdk.TrainModel):
         # which is not the case.
         self._validation_logger.info("\t".join(["loss"] +
             sorted([x for x in self._validation_metrics.metrics.keys()])))
+        
+        self.train_and_validate = eval_addon(self, self.train_and_validate)
 
     def train(self):
         """
