@@ -173,7 +173,7 @@ class TrainModel(selene_sdk.TrainModel):
             The training loss.
 
         """
-        logger.debug('yup! It\'s training') # * Some brightness
+        # logger.debug('yup! It\'s training') # * Some brightness
         self.model.train()
         self.sampler.set_mode("train")
 
@@ -238,6 +238,7 @@ class TrainModel(selene_sdk.TrainModel):
                 batch_targets = batch_targets.send(
                                         self.workers_list[self.current_worker])
             self.current_worker = (self.current_worker + 1) % len(self.workers_list)
+            logger.debug(f'Current data from: {batch_sequences.location}') 
             t_f_sampling = time()
             logger.debug(
                 ("[BATCH] Time to sample {0} examples: {1} s.").format(
