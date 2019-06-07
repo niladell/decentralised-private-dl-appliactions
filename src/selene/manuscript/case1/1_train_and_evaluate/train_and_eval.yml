@@ -45,7 +45,7 @@ train_model: !obj:selene_sdk.TrainModel {
 #     report_gt_feature_n_positives: 20,
 #     n_validation_samples: 32000,
 #     n_test_samples: 640000,
-    use_cuda: False,
+    use_cuda: True,
     data_parallel: False # What is this?
 }
 output_dir: /home/nil/Documents/NSC/Decentriq/short_project/Project/src/selene/manuscript/case1/training_outputs

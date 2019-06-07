@@ -5,7 +5,17 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-torch.set_default_tensor_type(torch.FloatTensor) # TODO testing
+USE_CUDA = True
+if not torch.cuda.is_available() and USE_CUDA:
+        USE_CUDA = False
+        logger.warning('Cuda unabailable, falling back to CPU')
+if USE_CUDA:
+    # TODO Quickhack. Actually need to fix the problem moving the model to CUDA
+    torch.set_default_tensor_type(torch.cuda.FloatTensor)
+
+device = torch.device("cuda" if USE_CUDA else "cpu")
+
+
 class DeepSEA(nn.Module):
     def __init__(self, sequence_length, n_genomic_features):
         """

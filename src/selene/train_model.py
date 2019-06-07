@@ -27,8 +27,15 @@ import syft as sy
 hook = sy.TorchHook(torch)
 logger = logging.getLogger("selene")
 
-torch.set_default_tensor_type(torch.FloatTensor) # TODO testing
+USE_CUDA = True
+if not torch.cuda.is_available() and USE_CUDA:
+        USE_CUDA = False
+        logger.warning('Cuda unabailable, falling back to CPU')
+if USE_CUDA:
+    # TODO Quickhack. Actually need to fix the problem moving the model to CUDA
+    torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
+device = torch.device("cuda" if USE_CUDA else "cpu")
 
 def eval_addon(self, f):
     def wrapper():
@@ -64,7 +71,7 @@ class TrainModel(selene_sdk.TrainModel):
         """
         Constructs a new `TrainModel` object.
         """
-        self.model = model.type(torch.FloatTensor)
+        self.model = model.type(torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor)
         self.sampler = data_sampler
         self.criterion = loss_criterion
         self.optimizer = optimizer_class(
