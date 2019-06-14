@@ -1,3 +1,7 @@
+# Ignore all the elements in the manuscript
+# (with the exception of those whe are tracking manually)
+src/selene/manuscript/
+
 # Whitelist ALL data folders
 data/
 *data/
