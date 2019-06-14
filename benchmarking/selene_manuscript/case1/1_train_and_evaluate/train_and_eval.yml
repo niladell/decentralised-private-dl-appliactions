@@ -1,7 +1,7 @@
 ---
 ops: [train, evaluate]
 model: {
-    path: /home/nil/Documents/NSC/Decentriq/short_project/Project/src/selene/manuscript/case1/deepsea.py,
+    path: /home/nil/Documents/NSC/Decentriq/short_project/Project/benchmarking/selene_manuscript/case1/deepsea.py,
     class: DeepSEA,
     class_args: {
         sequence_length: 1000,
@@ -11,14 +11,14 @@ model: {
 }
 sampler: !obj:selene_sdk.samplers.IntervalsSampler {
     reference_sequence: !obj:selene_sdk.sequences.Genome {
-        input_path: /home/nil/Documents/NSC/Decentriq/short_project/Project/src/selene/manuscript/case1/data/GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta,
+        input_path: /home/nil/Documents/NSC/Decentriq/short_project/Project/benchmarking/selene_manuscript/case1/data/GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta,
         blacklist_regions: hg38
     },
     features: !obj:selene_sdk.utils.load_features_list {
-        input_path: /home/nil/Documents/NSC/Decentriq/short_project/Project/src/selene/manuscript/case1/data/distinct_features.txt
+        input_path: /home/nil/Documents/NSC/Decentriq/short_project/Project/benchmarking/selene_manuscript/case1/data/distinct_features.txt
     },
-    target_path: /home/nil/Documents/NSC/Decentriq/short_project/Project/src/selene/manuscript/case1/data/GATA1_proery_bm.bed.gz,
-    intervals_path: /home/nil/Documents/NSC/Decentriq/short_project/Project/src/selene/manuscript/case1/data/hg38_TF_intervals.txt,
+    target_path: /home/nil/Documents/NSC/Decentriq/short_project/Project/benchmarking/selene_manuscript/case1/data/GATA1_proery_bm.bed.gz,
+    intervals_path: /home/nil/Documents/NSC/Decentriq/short_project/Project/benchmarking/selene_manuscript/case1/data/hg38_TF_intervals.txt,
     test_holdout: [chr8, chr9],
     validation_holdout: [chr6, chr7],
     seed: 127,
@@ -51,7 +51,7 @@ train_model: !obj:selene_sdk.TrainModel {
     workers_list: "alice, bob",
     # virtual_workers: True --> As of right now all workers are assumed to be virtual #TODO Add non-virtual workers
 }
-output_dir: /home/nil/Documents/NSC/Decentriq/short_project/Project/src/selene/manuscript/case1/training_outputs
+output_dir: /home/nil/Documents/NSC/Decentriq/short_project/Project/benchmarking/selene_manuscript/case1/training_outputs
 random_seed: 42
 create_subdirectory: False
 ...
