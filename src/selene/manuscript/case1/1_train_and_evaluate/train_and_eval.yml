@@ -46,7 +46,10 @@ train_model: !obj:selene_sdk.TrainModel {
 #     n_validation_samples: 32000,
 #     n_test_samples: 640000,
     use_cuda: True,
-    data_parallel: False # What is this?
+    data_parallel: False, # What is this?
+
+    workers_list: "alice, bob",
+    # virtual_workers: True --> As of right now all workers are assumed to be virtual #TODO Add non-virtual workers
 }
 output_dir: /home/nil/Documents/NSC/Decentriq/short_project/Project/src/selene/manuscript/case1/training_outputs
 random_seed: 42

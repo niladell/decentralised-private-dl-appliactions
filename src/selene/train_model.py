@@ -4,6 +4,7 @@ The objective of this file is to overwrite the functions of Selene
  Syft/Federated Training
 """
 import os
+import warnings
 import logging
 from time import strftime
 from time import time
@@ -25,9 +26,12 @@ from selene_sdk.train_model import _metrics_logger
 import syft as sy
 
 hook = sy.TorchHook(torch)
+logging.captureWarnings(True)
 logger = logging.getLogger("selene")
 
-USE_CUDA = True
+USE_CUDA = True  # TODO Avoid global vars. Specially when in multiple files
+                 # TODO Pass from YAML file
+
 if not torch.cuda.is_available() and USE_CUDA:
         USE_CUDA = False
         logger.warning('Cuda unabailable, falling back to CPU')
@@ -46,131 +50,28 @@ def eval_addon(self, f):
 
 class TrainModel(selene_sdk.TrainModel):
 
-    def __init__(self,
-                 model,
-                 data_sampler,
-                 loss_criterion,
-                 optimizer_class,
-                 optimizer_kwargs,
-                 batch_size,
-                 max_steps,
-                 report_stats_every_n_steps,
-                 output_dir,
-                 save_checkpoint_every_n_steps=1000,
-                 save_new_checkpoints_after_n_steps=None,
-                 report_gt_feature_n_positives=10,
-                 n_validation_samples=None,
-                 n_test_samples=None,
-                 cpu_n_threads=1,
-                 use_cuda=False,
-                 data_parallel=False,
-                 logging_verbosity=2,
-                 checkpoint_resume=None,
-                 metrics=dict(roc_auc=roc_auc_score,
-                              average_precision=average_precision_score)):
+    def __init__(self, *args, **kwargs):
         """
         Constructs a new `TrainModel` object.
         """
-        self.model = model.type(torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor)
-        self.sampler = data_sampler
-        self.criterion = loss_criterion
-        self.optimizer = optimizer_class(
-            self.model.parameters(), **optimizer_kwargs)
-
-        self.batch_size = batch_size
-        self.max_steps = max_steps
-        self.nth_step_report_stats = report_stats_every_n_steps
-        self.nth_step_save_checkpoint = None
-        if not save_checkpoint_every_n_steps:
-            self.nth_step_save_checkpoint = report_stats_every_n_steps
+        if args:
+            warnings.warn(f'Unexpected argument passed to model: {args}.'
+                          'Possible overwrite on YAML config or passed from custom code.')
+        kwargs['model'] = kwargs['model'].type(torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor)
+        if 'workers_list' in kwargs:
+            workers_list = kwargs['workers_list'].split()
+            del kwargs['workers_list']
+            assert type(workers_list[0]) == str, NotImplementedError('Workers can only be string as of now')
+            self._create_virtual_workers(workers_list)
         else:
-            self.nth_step_save_checkpoint = save_checkpoint_every_n_steps
-
-        self.save_new_checkpoints = save_new_checkpoints_after_n_steps
-
-        logger.info("Training parameters set: batch size {0}, "
-                    "number of steps per 'epoch': {1}, "
-                    "maximum number of steps: {2}".format(
-                        self.batch_size,
-                        self.nth_step_report_stats,
-                        self.max_steps))
-
-        # torch.set_num_threads(cpu_n_threads)  # TODO This is breaking with Syft
-
-        self.use_cuda = use_cuda
-        self.data_parallel = data_parallel
-
-        if self.data_parallel:
-            self.model = nn.DataParallel(model)
-            logger.debug("Wrapped model in DataParallel")
-
-        if self.use_cuda:
-            self.model.cuda()
-            self.criterion.cuda()
-            logger.debug("Set modules to use CUDA")
-
-        os.makedirs(output_dir, exist_ok=True)
-        self.output_dir = output_dir
-
-        initialize_logger(
-            os.path.join(self.output_dir, "{0}.log".format(__name__)),
-            verbosity=logging_verbosity)
-
-        self._create_validation_set(n_samples=n_validation_samples)
-        self._validation_metrics = PerformanceMetrics(
-            self.sampler.get_feature_from_index,
-            report_gt_feature_n_positives=report_gt_feature_n_positives,
-            metrics=metrics)
-
-        if "test" in self.sampler.modes:
-            self._test_data = None
-            self._n_test_samples = n_test_samples
-            self._test_metrics = PerformanceMetrics(
-                self.sampler.get_feature_from_index,
-                report_gt_feature_n_positives=report_gt_feature_n_positives,
-                metrics=metrics)
-
-        self._start_step = 0
-        self._min_loss = float("inf") # TODO: Should this be set when it is used later? Would need to if we want to train model 2x in one run.
-        if checkpoint_resume is not None:
-            checkpoint = torch.load(
-                checkpoint_resume,
-                map_location=lambda storage, location: storage)
-
-            self.model = load_model_from_state_dict(
-                checkpoint["state_dict"], self.model)
-
-            self._start_step = checkpoint["step"]
-            if self._start_step >= self.max_steps:
-                self.max_steps += self._start_step
-
-            self._min_loss = checkpoint["min_loss"]
-            self.optimizer.load_state_dict(
-                checkpoint["optimizer"])
-            if self.use_cuda:
-                for state in self.optimizer.state.values():
-                    for k, v in state.items():
-                        if isinstance(v, torch.Tensor):
-                            state[k] = v.cuda()
-
-            logger.info(
-                ("Resuming from checkpoint: step {0}, min loss {1}").format(
-                    self._start_step, self._min_loss))
-
-        self._train_logger = _metrics_logger(
-                "{0}.train".format(__name__), self.output_dir)
-        self._validation_logger = _metrics_logger(
-                "{0}.validation".format(__name__), self.output_dir)
-
-        self._train_logger.info("loss")
-        # TODO: this makes the assumption that all models will report ROC AUC,
-        # which is not the case.
-        self._validation_logger.info("\t".join(["loss"] +
-            sorted([x for x in self._validation_metrics.metrics.keys()])))
-        
+            # If there are no workers (i.e. federated scheme) then fallback to the original functions
+            self.train = super().train
+            self._get_batch = super()._get_batch
+        kwargs['cpu_n_threads'] = 4
+        super().__init__(*args, **kwargs)
         self.train_and_validate = eval_addon(self, self.train_and_validate)
 
-    def train(self):
+    def train(self):  #pylint: disable=method-hidden
         """
         Trains the model on a batch of data.
 
@@ -212,7 +113,7 @@ class TrainModel(selene_sdk.TrainModel):
         self.model.get()
         return loss.get().detach().cpu().numpy() # loss.item() # TODO < Check why not working
 
-    def _get_batch(self):
+    def _get_batch(self):  #pylint: disable=method-hidden
             """
             Fetches a mini-batch of examples
 
@@ -230,20 +131,14 @@ class TrainModel(selene_sdk.TrainModel):
             batch_sequences = torch.tensor(batch_sequences, requires_grad=True, dtype=torch.float32)
             batch_targets = torch.tensor(batch_targets, requires_grad=True, dtype=torch.float32)
 
-            # ! TEMPORAL WORKAROUND!
             try:
                 batch_sequences = batch_sequences.send(
                                         self.workers_list[self.current_worker])
                 batch_targets = batch_targets.send(
                                         self.workers_list[self.current_worker])
             except AttributeError:
-                workers = [sy.VirtualWorker(hook, id=f'worker_{i}') for i in range(2)]
-                # workers, _ = create_virtual_workers(2) # TODO Pass this from the outside
-                self.define_workers(workers)
-                batch_sequences = batch_sequences.send(
-                                        self.workers_list[self.current_worker])
-                batch_targets = batch_targets.send(
-                                        self.workers_list[self.current_worker])
+                raise('Somethign went wrong with sending the workers data')
+
             self.current_worker = (self.current_worker + 1) % len(self.workers_list)
             logger.debug(f'Current data from: {batch_sequences.location}') 
             t_f_sampling = time()
@@ -253,6 +148,7 @@ class TrainModel(selene_sdk.TrainModel):
                     t_f_sampling - t_i_sampling))
             return (batch_sequences, batch_targets)
 
-    def define_workers(self, workers_list):
+    def _create_virtual_workers(self, workers_names):
+        workers_list = [sy.VirtualWorker(hook, id=i) for i in workers_names]
         self.workers_list = workers_list
         self.current_worker = 0
