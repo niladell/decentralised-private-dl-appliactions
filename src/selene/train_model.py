@@ -58,18 +58,23 @@ class TrainModel(selene_sdk.TrainModel):
             warnings.warn(f'Unexpected argument passed to model: {args}.'
                           'Possible overwrite on YAML config or passed from custom code.')
         kwargs['model'] = kwargs['model'].type(torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor)
+
+        workers_log_msg = ''
         if 'workers_list' in kwargs:
-            workers_list = kwargs['workers_list'].split()
+            workers_list = [x.strip() for x in kwargs['workers_list'].split(',')]
             del kwargs['workers_list']
             assert type(workers_list[0]) == str, NotImplementedError('Workers can only be string as of now')
             self._create_virtual_workers(workers_list)
+            workers_log_msg += 'Running the model in federate mode.'
+            workers_log_msg += f' -- Clients are {self.workers_list}'
         else:
             # If there are no workers (i.e. federated scheme) then fallback to the original functions
+            workers_log_msg += 'Running the model in vanilla mode. No federated schema used.'
             self.train = super().train
             self._get_batch = super()._get_batch
-        kwargs['cpu_n_threads'] = 4
         super().__init__(*args, **kwargs)
         self.train_and_validate = eval_addon(self, self.train_and_validate)
+        logger.info(workers_log_msg)  # Needs to be run after calling super()
 
     def train(self):  #pylint: disable=method-hidden
         """
@@ -81,7 +86,6 @@ class TrainModel(selene_sdk.TrainModel):
             The training loss.
 
         """
-        # logger.debug('yup! It\'s training') # * Some brightness
         self.model.train()
         self.sampler.set_mode("train")
 
