@@ -33,8 +33,9 @@ train_model: !obj:selene_sdk.TrainModel {
     batch_size: 8,
 
     max_steps: 256,
-    report_stats_every_n_steps: 32,
+    report_stats_every_n_steps: 100,
     report_gt_feature_n_positives: 20,
+    save_new_checkpoints_after_n_steps: 1000,
     n_validation_samples: 128,
     n_test_samples: 256,
 

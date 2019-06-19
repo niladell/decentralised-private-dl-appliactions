@@ -56,8 +56,8 @@ class DeepSEA(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(960 * self.n_channels, n_genomic_features),
             nn.ReLU(inplace=True),
-            nn.Linear(n_genomic_features, n_genomic_features))
-            # nn.Sigmoid())
+            nn.Linear(n_genomic_features, n_genomic_features),
+            nn.Sigmoid())
 
     def forward(self, x):
         """Forward propagation of a batch.
@@ -71,8 +71,9 @@ def criterion():
     """
     The criterion the model aims to minimize.
     """
-    # return nn.BCELoss()
-    return nn.BCEWithLogitsLoss()
+    return nn.BCELoss()
+    # return nn.BCEWithLogitsLoss()
+
 
 
 def get_optimizer(lr):
