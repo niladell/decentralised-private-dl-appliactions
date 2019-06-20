@@ -17,6 +17,7 @@ from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import sklearn
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 
@@ -44,6 +45,13 @@ if USE_CUDA:
 
 device = torch.device("cuda" if USE_CUDA else "cpu")
 
+
+def balanced_accuracy_score(targets, predictions):
+    predictions[predictions <= 0.5] = 0
+    predictions[predictions > 0.5] = 1
+    return sklearn.metrics.balanced_accuracy_score(targets, predictions)
+
+
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
@@ -59,6 +67,9 @@ class TrainModel(selene_sdk.TrainModel):
             warnings.warn(f'Unexpected argument passed to model: {args}.'
                           'Possible overwrite on YAML config or passed from custom code.')
         kwargs['model'] = kwargs['model'].type(torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor)
+        kwargs['metrics'] = dict(roc_auc=roc_auc_score,
+                              average_precision=average_precision_score,
+                              balanced_accuracy=balanced_accuracy_score)
 
         workers_log_msg = ''
         if 'workers_list' in kwargs:
@@ -180,7 +191,10 @@ class TrainModel(selene_sdk.TrainModel):
                 scheduler.step(validation_loss)
                 logger.debug(f'Scheduler up! -- Val loss> {validation_loss}')
                 self.summary.add_scalar('validation/loss', validation_loss, step)
-                self.summary.add_scalars('validation', self._validation_metrics)
+                for key, value in valid_scores.items():
+                    if value is None:
+                        valid_scores[key] = np.nan
+                self.summary.add_scalars('validation', valid_scores, global_step=step)
 
                 if validation_loss < min_loss:
                     min_loss = validation_loss
@@ -227,7 +241,7 @@ class TrainModel(selene_sdk.TrainModel):
                 raise('Somethign went wrong with sending the workers data')
 
             self.current_worker = (self.current_worker + 1) % len(self.workers_list)
-            logger.debug(f'Current data from: {batch_sequences.location}') 
+            logger.debug(f'Current data from: {batch_sequences.location}')
             t_f_sampling = time()
             logger.debug(
                 ("[BATCH] Time to sample {0} examples: {1} s.").format(
