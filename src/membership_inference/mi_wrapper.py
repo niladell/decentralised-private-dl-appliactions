@@ -16,24 +16,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-
-# class SummaryOverride(SummaryWriter):
-#     def __init__(self, *args, **kwargs):
-#         self.global_step = 0
-#         self.list_of_tags = []
-#         super().__init__(*args, **kwargs)
-
-#     def add_scalar_regular(self, *args, **kwargs):
-#         super().add_scalar(*args, **kwargs)
-
-#     def add_scalar(self, tag, scalar, step, time=time.time()) :
-#         super().add_scalar(tag, scalar, step, time)
-
-
-#     def update_step(self):
-#         self.global_step += 1
-
-
 def train_with_mi(model,
                   train_dataloader,
                   criterion,
@@ -103,14 +85,14 @@ def train_with_mi(model,
 
     logger.info(f'Summary folder: "{logger_name}run_{run_number:03d}/"')
     summary_writer = SummaryWriter(logdir=f'{logger_name}run_{run_number:03d}/target') #logdir=f'logs/run_{run_number:03d}_{extra_naming_logger}/target')
+    summary_writer_attack = SummaryWriter(logdir=f'{logger_name}run_{run_number:03d}/attack') #(logdir=f'logs/run_{run_number:03d}_{extra_naming_logger}/attack')
+
     # input_tensor = torch.Tensor(12, 3, 32, 32) #.to(device)
     # dummy_tensor_shape = [train_dataloader.batch_size] + list(train_dataloader.dataset[0][0].shape)
     # example_input_tensor = torch.Tensor()
     # summary_writer.add_graph(model, torch.autograd.Variable(example_input_tensor, requires_grad=True))
 
-    summary_writer_attack = SummaryWriter(logdir=f'{logger_name}run_{run_number:03d}/attack') #(logdir=f'logs/run_{run_number:03d}_{extra_naming_logger}/attack')
 
-    # summary_writer = SummaryOverride(logdir=f'logs')
     len_out = len(out_dataloader)*out_dataloader.batch_size
     len_train = len(train_dataloader)*train_dataloader.batch_size
     if len_out < len_train:
@@ -158,6 +140,8 @@ def train_with_mi(model,
             train_split_len = int(dataset_len * train_portion)
             mi_train, mi_test = torch.utils.data.random_split(new_data, [train_split_len, dataset_len - train_split_len])
             run_alternative_attacks(mi_train, mi_test, summary_writer=summary_writer_attack, epoch=current_epoch)
+
+
         ###################################
         #     if save_data:
         #         folders_save_data = '/'.join(save_data.split('/')[:-1])
@@ -197,13 +181,14 @@ def generate_mi_samples(model, train_dataloader, out_dataloader, device=None, no
     model.eval()
     data_collect = []
     membership_collect = []
+    
     def _collect(model, dataloader, is_trainingdata: bool):
         if is_trainingdata:
             label_fn = np.ones
         else:
             label_fn = np.zeros
         
-        for (sample, _) in out_dataloader:
+        for (sample, _) in dataloader:
             if device:
                 sample = sample.to(device)
             posterior = model(sample.detach())
