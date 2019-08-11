@@ -23,7 +23,7 @@ configs = sel.utils.load_path(config_path, instantiate=False)
 
 logger.info('--- Start training federated ---')
 time_fl = time.time()
-sel.utils.parse_configs_and_run(configs, lr=0.01)
+sel.utils.parse_configs_and_run(configs, lr=0.2)
 time_fl = time.time() - time_fl
 logger.info(f'Total time {time_fl}s')
 logger.info('--- End training federated ---')

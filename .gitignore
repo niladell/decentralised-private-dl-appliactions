@@ -1,10 +1,21 @@
 # Ignore all the elements in the manuscript
 # (with the exception of those whe are tracking
 benchmarking/selene_manuscript/
+benchmarking/ImageNet
 
 # Whitelist ALL data folders
 data/
 *data/
+
+# If to use in cluser/GCS/AWS
+lsf*
+*fl
+benchmarking/logs*
+benchmarking/tmp*
+benchmarking/runs*
+benchmarking/test_*
+others/runs*
+runs*
 
 # Editors
 .vscode/
