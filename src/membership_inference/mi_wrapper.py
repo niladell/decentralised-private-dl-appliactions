@@ -87,6 +87,21 @@ def train_with_mi(model,
     summary_writer = SummaryWriter(logdir=f'{logger_name}run_{run_number:03d}/target') #logdir=f'logs/run_{run_number:03d}_{extra_naming_logger}/target')
     summary_writer_attack = SummaryWriter(logdir=f'{logger_name}run_{run_number:03d}/attack') #(logdir=f'logs/run_{run_number:03d}_{extra_naming_logger}/attack')
 
+    def save_sample_images(writer, train_dataloader, out_dataloader):
+        def _save_sample_imgs(writer, dataloader, tag, num_imgs=10):
+            sample, _ = next(iter(dataloader))
+            # logger.info(sample[:10])
+            # logger.info(sample.shape)
+            for i, img in enumerate(torch.unbind(sample)):
+                if i >= num_imgs:
+                    break
+                im_max, im_min = torch.max(img), torch.min(img)
+                img = (img - im_min)/(im_max - im_min)
+                writer.add_image(tag, img, i)
+        
+        _save_sample_imgs(writer, train_dataloader, 'train_imgs')
+        _save_sample_imgs(writer, out_dataloader, 'out(test)_imgs')
+    save_sample_images(summary_writer, train_dataloader, out_dataloader)
     # input_tensor = torch.Tensor(12, 3, 32, 32) #.to(device)
     # dummy_tensor_shape = [train_dataloader.batch_size] + list(train_dataloader.dataset[0][0].shape)
     # example_input_tensor = torch.Tensor()

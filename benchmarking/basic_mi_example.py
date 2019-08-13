@@ -47,7 +47,7 @@ parser.add_argument('--dataset')
 parser.add_argument('--optimizer_set', type=int)
 parser.add_argument('--seed', type=int)
 parser.add_argument('--lr', type=float)
-parser.add_argument('--clean_start', type=str)
+parser.add_argument('--clean_start', type=str, default='true')
 args = parser.parse_args()
 logger.info(args)
 
@@ -81,16 +81,16 @@ elif model_to_use == 'vgg16':
         import vgg
         target_net_type = lambda: vgg.vgg16_bn()
         shadow_net_type = lambda: vgg.vgg16_bn() 
-elif model_to_use == 'resnet':
+elif model_to_use == 'resnet-50':
     if dataset_to_use == 'ImageNet':
             batch_size = 64    # import resnet
             target_net_type = torchvision.models.resnet50
             shadow_net_type = torchvision.models.resnet50
-    else:
-        import resnet
-        target_net_type = lambda: resnet.resnet32(num_classes=10)
-        target_net_type = lambda: resnet.resnet32(num_classes=10)
-        resnet.test(target_net_type())
+elif model_to_use == 'resnet-32':
+    import resnet
+    target_net_type = lambda: resnet.resnet32(num_classes=10)
+    target_net_type = lambda: resnet.resnet32(num_classes=10)
+    resnet.test(target_net_type())
 elif model_to_use == 'inception_v3':
     target_net_type = torchvision.models.inception_v3
     shadow_net_type = torchvision.models.inception_v3
@@ -150,6 +150,7 @@ test_transform = torchvision.transforms.Compose([
 
 optimizer_list = [('sgd', optim.SGD, {}),
                   ('sgd_momentum', optim.SGD, {'momentum': 0.9}),
+                  ('sgd_momentum_wd', optim.SGD, {'momentum': 0.9, 'weight_decay': 5e-4}),
                   ('adadelta', optim.Adadelta, {}),
                   ('rmsprop', optim.RMSprop, {'eps': 1e-5}),
                   ('adam', optim.Adam, {'eps': 1e-5})]

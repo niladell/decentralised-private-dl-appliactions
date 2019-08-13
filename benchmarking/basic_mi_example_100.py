@@ -47,8 +47,9 @@ parser.add_argument('--optimizer_set', type=int)
 parser.add_argument('--seed', type=int)
 parser.add_argument('--lr', type=float)
 parser.add_argument('--epochs', type=int, default=100)
-parser.add_argument('--data_aug', str, default='false')
-parser.add_argument('--clean_start', str, default='true')
+parser.add_argument('--data_aug', type=str, default='false')
+parser.add_argument('--train_scheduler', type=str, default='false')
+parser.add_argument('--clean_start', type=str, default='true')
 args = parser.parse_args()
 logger.info(args)
 
@@ -57,6 +58,7 @@ n_epochs = args.epochs
 
 clean_start = args.clean_start.lower() == 'true' 
 data_aug = args.data_aug.lower() == 'true' 
+train_scheduler = args.train_scheduler.lower() == 'true'
 optimizer_set = args.optimizer_set
 seed_set = args.seed
 model_to_use = args.model
@@ -65,26 +67,20 @@ lr = args.lr
 
 if model_to_use == 'vanilla':
     target_net_type = models.mlleaks_cnn
-    shadow_net_type = models.mlleaks_cnn
 elif model_to_use == 'alexnet':
     target_net_type = lambda: torchvision.models.alexnet(num_classes=100)
-    shadow_net_type = lambda: torchvision.models.alexnet(num_classes=100)
 elif model_to_use == 'vgg16':
     import vgg_100
     target_net_type = lambda: vgg_100.vgg16_bn()
-    shadow_net_type = lambda: vgg_100.vgg16_bn()
 elif model_to_use == 'resnet-32':
     import resnet
-    target_net_type = lambda: resnet.resnet32(num_classes=100)
     target_net_type = lambda: resnet.resnet32(num_classes=100)
     resnet.test(target_net_type())
 elif model_to_use == 'resnet-34':
     import resnet_new as res
     target_net_type = res.resnet34
-    target_net_type = res.resnet34
 elif model_to_use == 'inception_v3':
     target_net_type = torchvision.models.inception_v3
-    shadow_net_type = torchvision.models.inception_v3
 else:
     raise(NotImplementedError)
 
@@ -154,17 +150,12 @@ optimizer_list = [('sgd', optim.SGD, {}),
 optim_name, optimizer, opt_kargs = optimizer_list[optimizer_set]
 
 seed_list = [42, 25, 84, 12, 90]
-# seed = seed_list[seed_set]
-
-# for optim_name, optimizer, opt_kargs in optimizer_list:
-#     for seed in seed_list:
-#         torch.manual_seed(seed)
+seed = seed_list[seed_set]
+torch.manual_seed(seed)
 
 
 cifar10_trainset =  dataset('data/', train=True, transform=train_transform, download=True)
-cifar10_testset =  dataset('data/', train=False, transform=train_transform, download=True)
-
-# cifar10_trainloader = torch.utils.data.DataLoader(cifar10_trainset, batch_size=batch_size, shuffle=True)
+cifar10_testset =  dataset('data/', train=False, transform=test_transform, download=True)
 
 total_size = len(cifar10_trainset)
 split = int(total_size * mi_split)
@@ -178,6 +169,7 @@ split = int(total_size * mi_split)
 
 # target_train_loader = torch.utils.data.DataLoader(cifar10_trainset, batch_size=batch_size, sampler=target_train_sampler)
 # target_out_loader = torch.utils.data.DataLoader(cifar10_trainset, batch_size=batch_size, sampler=target_out_sampler)
+
 
 target_train_loader = torch.utils.data.DataLoader(cifar10_trainset,
                                                   batch_size=batch_size,
@@ -198,16 +190,18 @@ try:
     target_net = target_net_type().to(device)
 except RuntimeError as e:
     logger.warning(f'RuntimeError ({e}) was raised when trying to move target net to device. Skipping that step')
-target_net.apply(weights_init) # ?!? THE DEVIL
+# target_net.apply(weights_init) # ?!? THE DEVIL
 
 target_loss = nn.CrossEntropyLoss()
 optimizer = optimizer(target_net.parameters(), lr=lr, **opt_kargs) # optim.SGD(target_net.parameters(), lr=lr, momentum=0.9)
-# train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[60, 120, 160], gamma=0.2) #learning rate decay
 target_optim = {
     'optimizer': optimizer,
-    # 'train_scheduler': train_scheduler
-}
-
+    }
+    
+if train_scheduler: # TODO For now it just means learning rate decay
+    target_optim['train_scheduler'] = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[60, 120, 160], gamma=0.2) #learning rate decay
+    optim_name = f'{optim_name}-adaptativeLR'
+    
 
 # attack_net = mlleaks_mlp(n_in=k)
 # try:
@@ -237,4 +231,5 @@ mi.train_with_mi(model=target_net,
                 epochs=n_epochs,
                 attack_epochs=attack_epochs,
                 log_iteration = 1, start_epoch=0,
-                logger_name=f'logsAdam/{dataset_to_use}/{model_to_use}/{optim_name}-{lr}')
+                logger_name=f'logsAdam_saveme/{dataset_to_use}/{model_to_use}/{optim_name}-{lr}',
+                force_new_model=clean_start)
