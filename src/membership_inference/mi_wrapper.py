@@ -30,7 +30,7 @@ def train_with_mi(model,
                   mi_epochs=[],
                   epochs=10,
                   attack_epochs=5,
-                  log_iteration = 100, start_epoch=0, logger_name='logs', force_new_model = True):
+                  log_iteration = 100, start_epoch=0, logger_name='logs', force_new_model = True, extra_args={}):
     logger.info('Starting training')
 
     train_scheduler = None
@@ -73,9 +73,15 @@ def train_with_mi(model,
     if os.path.exists(checkpoint_f):
         with open(checkpoint_f, 'r') as f:
             last_saved_epoch = int(f.read())
+            logger.info('Checkpoint found: Epoch {last_saved_epoch}')
         if last_saved_epoch == (epochs - 1) or force_new_model:
-            run_number += 1
-            logger.info('Starting with a new clean model')
+            if type(force_new_model) == str or force_new_model == int:
+                run_number = int(force_new_model)
+                logger.info(f'Manually selected to run on run_{run_number:03d}')
+            else:
+                run_number += 1
+                logger.info('Starting with a new clean model')
+
         else:
             model.load_state_dict(torch.load(f'{base_log_folder}/model_last.fl'))
     else:
@@ -90,8 +96,6 @@ def train_with_mi(model,
     def save_sample_images(writer, train_dataloader, out_dataloader):
         def _save_sample_imgs(writer, dataloader, tag, num_imgs=10):
             sample, _ = next(iter(dataloader))
-            # logger.info(sample[:10])
-            # logger.info(sample.shape)
             for i, img in enumerate(torch.unbind(sample)):
                 if i >= num_imgs:
                     break
@@ -102,6 +106,7 @@ def train_with_mi(model,
         _save_sample_imgs(writer, train_dataloader, 'train_imgs')
         _save_sample_imgs(writer, out_dataloader, 'out(test)_imgs')
     save_sample_images(summary_writer, train_dataloader, out_dataloader)
+
     # input_tensor = torch.Tensor(12, 3, 32, 32) #.to(device)
     # dummy_tensor_shape = [train_dataloader.batch_size] + list(train_dataloader.dataset[0][0].shape)
     # example_input_tensor = torch.Tensor()
@@ -110,9 +115,14 @@ def train_with_mi(model,
 
     len_out = len(out_dataloader)*out_dataloader.batch_size
     len_train = len(train_dataloader)*train_dataloader.batch_size
+    if 'mi_train_dataset' in extra_args:
+        mi_train_dataset = extra_args['mi_train_dataset']
+    else:
+        mi_train_dataset = train_dataloader.dataset 
+
     if len_out < len_train:
         mi_train_sampler = torch.utils.data.SubsetRandomSampler([np.random.randint(0, len_train) for _ in range(len_out)])
-        mi_train_loader = torch.utils.data.DataLoader(train_dataloader.dataset,
+        mi_train_loader = torch.utils.data.DataLoader(mi_train_dataset,
                                             batch_size=out_dataloader.batch_size, sampler=mi_train_sampler, num_workers=out_dataloader.num_workers)
         logger.info(f'Size of the (target) model training dataset {len(train_dataloader)*mi_train_loader.batch_size} (size of test dataset: {len(out_dataloader)*out_dataloader.batch_size})')
         logger.info(f'Size of MI train {len(mi_train_loader)*mi_train_loader.batch_size} and MI test {len(out_dataloader)*out_dataloader.batch_size}')

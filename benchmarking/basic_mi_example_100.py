@@ -111,6 +111,7 @@ dataset_list = {
 
 dataset, num_classes = dataset_list[dataset_to_use]
 
+extra_args = {}
 
 if data_aug:
     train_transform = torchvision.transforms.Compose([
@@ -122,6 +123,13 @@ if data_aug:
         torchvision.transforms.Normalize([0.5071, 0.4865, 0.4409], [0.2673, 0.2564, 0.2762])
     ])
     dataset_to_use = f'{dataset_to_use}-wAug'
+    mi_transform = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize([0.5071, 0.4865, 0.4409], [0.2673, 0.2564, 0.2762])
+    ])
+    cifar10_trainset_mi = dataset('data/', train=True, transform=mi_transform, download=True)
+    extra_args['mi_train_dataset'] = cifar10_trainset_mi
+
 else:
     train_transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
@@ -143,6 +151,7 @@ test_transform = torchvision.transforms.Compose([
 optimizer_list = [('sgd', optim.SGD, {}),
                   ('sgd_momentum', optim.SGD, {'momentum': 0.9}),
                   ('sgd_momentum_wd', optim.SGD, {'momentum': 0.9, 'weight_decay': 5e-4}),
+                  ('sgd_momentum_wd-5e-3', optim.SGD, {'momentum': 0.9, 'weight_decay': 5e-3}),
                   ('adadelta', optim.Adadelta, {}),
                   ('rmsprop', optim.RMSprop, {'eps': 1e-5}),
                   ('adam', optim.Adam, {'eps': 1e-5})]
@@ -226,10 +235,11 @@ mi.train_with_mi(model=target_net,
                 attack_criterion=None,
                 attack_optimizer=None,
                 attack_batch_size = 128,
-                save_data = False, #'MI_data/saved_data',
+                save_data = 'test_Aug14', #False, #'MI_data/saved_data',
                 mi_epochs='all',
                 epochs=n_epochs,
                 attack_epochs=attack_epochs,
                 log_iteration = 1, start_epoch=0,
-                logger_name=f'logsAdam_saveme/{dataset_to_use}/{model_to_use}/{optim_name}-{lr}',
-                force_new_model=clean_start)
+                logger_name=f'logs_test_guild/{dataset_to_use}-MI-AUG/{model_to_use}/{optim_name}-{lr}',
+                force_new_model=clean_start,
+                extra_args=extra_args)

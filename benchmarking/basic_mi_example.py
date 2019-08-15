@@ -57,7 +57,13 @@ seed_set = args.seed
 model_to_use = args.model
 dataset_to_use = args.dataset
 lr = args.lr
-clean_start = args.clean_start.lower() == 'true' 
+if args.clean_start.lower() == 'true':
+    clean_start = True
+elif args.clean_start.isdigit():
+    clean_start = args.clean_start
+else:
+    clean_start = False
+# clean_start = args.clean_start.lower() == 'true' 
 
 if dataset_to_use == 'ImageNet': #TODO Properly organize these different options¿ YML file?
     mi_split = 0.05
@@ -151,6 +157,7 @@ test_transform = torchvision.transforms.Compose([
 optimizer_list = [('sgd', optim.SGD, {}),
                   ('sgd_momentum', optim.SGD, {'momentum': 0.9}),
                   ('sgd_momentum_wd', optim.SGD, {'momentum': 0.9, 'weight_decay': 5e-4}),
+                  ('sgd_momentum_wd-5e-3', optim.SGD, {'momentum': 0.9, 'weight_decay': 5e-3}),
                   ('adadelta', optim.Adadelta, {}),
                   ('rmsprop', optim.RMSprop, {'eps': 1e-5}),
                   ('adam', optim.Adam, {'eps': 1e-5})]
