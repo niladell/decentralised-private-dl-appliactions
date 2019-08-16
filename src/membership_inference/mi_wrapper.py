@@ -21,17 +21,21 @@ def train_with_mi(model,
                   criterion,
                   optimizer,
                   device,
-                  attack_model,
+                #   attack_model,
                   out_dataloader,
                   attack_criterion,
                   attack_optimizer,
                   attack_batch_size = 128,
                   save_data = False,
                   mi_epochs=[],
+                  start_epoch=0,
                   epochs=10,
-                  attack_epochs=5,
-                  log_iteration = 100, start_epoch=0, logger_name='logs', force_new_model = True, extra_args={}):
+                  log_iteration = 100,
+                  logger_name='logs',
+                  force_new_model = True,
+                  mi_train_loader=None):
     logger.info('Starting training')
+    assert mi_train_loader is not None, NotImplementedError('No MI trainset loader defined') # TODO GIVE AUTO OPTION
 
     train_scheduler = None
     if type(optimizer) == dict: # Is this the best way to send in optimizer wrappers?
@@ -105,7 +109,7 @@ def train_with_mi(model,
         
         _save_sample_imgs(writer, train_dataloader, 'train_imgs')
         _save_sample_imgs(writer, out_dataloader, 'out(test)_imgs')
-    save_sample_images(summary_writer, train_dataloader, out_dataloader)
+    save_sample_images(summary_writer, mi_train_loader, out_dataloader)
 
     # input_tensor = torch.Tensor(12, 3, 32, 32) #.to(device)
     # dummy_tensor_shape = [train_dataloader.batch_size] + list(train_dataloader.dataset[0][0].shape)
@@ -113,26 +117,26 @@ def train_with_mi(model,
     # summary_writer.add_graph(model, torch.autograd.Variable(example_input_tensor, requires_grad=True))
 
 
-    len_out = len(out_dataloader)*out_dataloader.batch_size
-    len_train = len(train_dataloader)*train_dataloader.batch_size
-    if 'mi_train_dataset' in extra_args:
-        mi_train_dataset = extra_args['mi_train_dataset']
-    else:
-        mi_train_dataset = train_dataloader.dataset 
+    # len_out = len(out_dataloader)*out_dataloader.batch_size
+    # len_train = len(train_dataloader)*train_dataloader.batch_size
+    # if 'mi_train_dataset' in extra_args:
+    #     mi_train_dataset = extra_args['mi_train_dataset']
+    # else:
+    #     mi_train_dataset = train_dataloader.dataset 
 
-    if len_out < len_train:
-        mi_train_sampler = torch.utils.data.SubsetRandomSampler([np.random.randint(0, len_train) for _ in range(len_out)])
-        mi_train_loader = torch.utils.data.DataLoader(mi_train_dataset,
-                                            batch_size=out_dataloader.batch_size, sampler=mi_train_sampler, num_workers=out_dataloader.num_workers)
-        logger.info(f'Size of the (target) model training dataset {len(train_dataloader)*mi_train_loader.batch_size} (size of test dataset: {len(out_dataloader)*out_dataloader.batch_size})')
-        logger.info(f'Size of MI train {len(mi_train_loader)*mi_train_loader.batch_size} and MI test {len(out_dataloader)*out_dataloader.batch_size}')
-    else:
-        raise NotImplementedError('I did not expect the test set to be bigger than the train set.')
+    # if len_out < len_train:
+    #     mi_train_sampler = torch.utils.data.SubsetRandomSampler([np.random.randint(0, len_train) for _ in range(len_out)])
+    #     mi_train_loader = torch.utils.data.DataLoader(mi_train_dataset,
+    #                                         batch_size=out_dataloader.batch_size, sampler=mi_train_sampler, num_workers=out_dataloader.num_workers)
+    #     logger.info(f'Size of the (target) model training dataset {len(train_dataloader)*mi_train_loader.batch_size} (size of test dataset: {len(out_dataloader)*out_dataloader.batch_size})')
+    #     logger.info(f'Size of MI train {len(mi_train_loader)*mi_train_loader.batch_size} and MI test {len(out_dataloader)*out_dataloader.batch_size}')
+    # else:
+    #     raise NotImplementedError('I did not expect the test set to be bigger than the train set.')
 
-    if save_data:
-        if not os.path.exists(f'tmp/{save_data}'):
-            os.makedirs(f'tmp/{save_data}', exist_ok=True)
-        torch.save(attack_model.state_dict(), f'tmp/{save_data}/init_attack_model.fl')
+    # if save_data:
+    #     if not os.path.exists(f'tmp/{save_data}'):
+    #         os.makedirs(f'tmp/{save_data}', exist_ok=True)
+    #     torch.save(attack_model.state_dict(), f'tmp/{save_data}/init_attack_model.fl')
 
 
     for current_epoch in range(start_epoch, epochs):
@@ -168,37 +172,37 @@ def train_with_mi(model,
 
 
         ###################################
-        #     if save_data:
-        #         folders_save_data = '/'.join(save_data.split('/')[:-1])
-        #         if not os.path.exists(folders_save_data):
-        #             os.makedirs(folders_save_data, exist_ok=True)
-        #         np.save(f'{save_data}-epoch_{current_epoch}', (mi_train, mi_test))
+            # if save_data:
+            #     folders_save_data = '/'.join(save_data.split('/')[:-1])
+            #     if not os.path.exists(folders_save_data):
+            #         os.makedirs(folders_save_data, exist_ok=True)
+            #     np.save(f'{save_data}-epoch_{current_epoch}', (mi_train, mi_test))
 
-        #     # values_top = np.array(mi_train)
-        #     # train_top = np.vstack(values_top[values_top[:,1] == 1.0, 0])
-        #     # out_top = np.vstack(values_top[values_top[:,1] == 0.0, 0])
+            # values_top = np.array(mi_train)
+            # train_top = np.vstack(values_top[values_top[:,1] == 1.0, 0])
+            # out_top = np.vstack(values_top[values_top[:,1] == 0.0, 0])
 
-        #     # train_top = np.fliplr(np.sort(train_top))
-        #     # out_top = np.fliplr(np.sort(out_top))
+            # train_top = np.fliplr(np.sort(train_top))
+            # out_top = np.fliplr(np.sort(out_top))
 
-        #     # plt.figure()
-        #     # plt.scatter(out_top[:, 0], out_top[:, 1], c='b')
-        #     # plt.scatter(train_top[:, 0], train_top[:, 1], c='r')
-        #     # # plt.show()
-        #     # plt.savefig(f'tmp/{current_epoch}-data.png')
-        #     # plt.close()
+            # plt.figure()
+            # plt.scatter(out_top[:, 0], out_top[:, 1], c='b')
+            # plt.scatter(train_top[:, 0], train_top[:, 1], c='r')
+            # # plt.show()
+            # plt.savefig(f'tmp/{current_epoch}-data.png')
+            # plt.close()
 
 
-        #     # to_tensor = lambda data: [(torch.tensor(x), torch.tensor(y).float()) for (x,y) in data]
-        #     # mi_train, mi_test = to_tensor(mi_train), to_tensor(mi_test)
-        #     # logger.info(f'Sample from training: {mi_train[:4]}')
-        #     # logger.info(f'Sample from testing: {mi_test[:4]}')
-        #     # mi_train = torch.utils.data.DataLoader(mi_train, batch_size=attack_batch_size, shuffle=True)
-        #     # mi_test = torch.utils.data.DataLoader(mi_test, batch_size=attack_batch_size, shuffle=True)
+            # to_tensor = lambda data: [(torch.tensor(x), torch.tensor(y).float()) for (x,y) in data]
+            # mi_train, mi_test = to_tensor(mi_train), to_tensor(mi_test)
+            # logger.info(f'Sample from training: {mi_train[:4]}')
+            # logger.info(f'Sample from testing: {mi_test[:4]}')
+            # mi_train = torch.utils.data.DataLoader(mi_train, batch_size=attack_batch_size, shuffle=True)
+            # mi_test = torch.utils.data.DataLoader(mi_test, batch_size=attack_batch_size, shuffle=True)
 
-        #     # attack_model.load_state_dict(torch.load(f'tmp/{save_data}/init_attack_model.fl'))
-        #     # tt.train(attack_model, mi_train, attack_criterion, attack_optimizer, device=device, epochs=attack_epochs, summary_writer=summary_writer_attack)
-        #     # tt.test(attack_model, mi_test, criterion=attack_criterion, device=device, summary_writer=summary_writer_attack, epoch=current_epoch)
+            # attack_model.load_state_dict(torch.load(f'tmp/{save_data}/init_attack_model.fl'))
+            # tt.train(attack_model, mi_train, attack_criterion, attack_optimizer, device=device, epochs=attack_epochs, summary_writer=summary_writer_attack)
+            # tt.test(attack_model, mi_test, criterion=attack_criterion, device=device, summary_writer=summary_writer_attack, epoch=current_epoch)
 
 
 def generate_mi_samples(model, train_dataloader, out_dataloader, device=None, normalization_fn=None):
