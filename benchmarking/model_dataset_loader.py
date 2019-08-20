@@ -102,6 +102,19 @@ def get_transforms(dataset_to_use: str, data_aug: bool):
         raise NotImplementedError(f'No transform for {dataset_to_use}')
 
 
+def _CIFAR10_transform(data_aug: bool):
+    if data_aug:
+        raise NotImplementedError('No data aug implemented for CIFAR10')
+    train_transform = torchvision.transforms.Compose([
+    torchvision.transforms.ToTensor(),
+    torchvision.transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    ])
+
+    test_transform = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    ])
+
 def _CIFAR100_transform(data_aug: bool):
     if data_aug:
         train_transform = torchvision.transforms.Compose([

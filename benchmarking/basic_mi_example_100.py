@@ -65,7 +65,8 @@ lr = args.lr
 from model_dataset_loader import get_dataset_and_model
 
 model, loaders = get_dataset_and_model(dataset_to_use, model_to_use, batch_size, data_aug)
-
+if data_aug:
+    dataset_to_use = f'{dataset_to_use}-Aug-'
 
 # ('sgd', optim.SGD), , ('adadelta', optim.Adadelta, {}),
 # optimizer_list = [  ('rmsprop', optim.RMSprop, {'eps': 1e-5})]
@@ -103,8 +104,8 @@ target_optim = {
     
 if train_scheduler: # TODO For now it just means learning rate decay
     # target_optim['train_scheduler'] = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[60, 120, 160], gamma=0.2) #learning rate decay
+    # optim_name = f'{optim_name}-adaptativeLR'
     target_optim['train_scheduler'] = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[60, 85, 95], gamma=0.2) #learning rate decay
-
     optim_name = f'{optim_name}-adaptativeLR-60.85.95'
 
 target_train_loader = loaders['trainloader']
@@ -128,6 +129,6 @@ mi.train_with_mi(model=target_net,
                 mi_epochs='all',
                 epochs=n_epochs,
                 log_iteration = 1, start_epoch=0,
-                logger_name=f'logs_test_guild2/{dataset_to_use}-MI-AUG/{model_to_use}/{optim_name}-{lr}.seed{seed}',
+                logger_name=f'logs_test0819/{dataset_to_use}-MI/{model_to_use}/{optim_name}-{lr}.seed{seed}',
                 force_new_model=clean_start,
                 mi_train_loader=mi_trainset_loader)

@@ -78,6 +78,7 @@ def train_with_mi(model,
         with open(checkpoint_f, 'r') as f:
             last_saved_epoch = int(f.read())
             logger.info('Checkpoint found: Epoch {last_saved_epoch}')
+
         if last_saved_epoch == (epochs - 1) or force_new_model:
             if type(force_new_model) == str or force_new_model == int:
                 run_number = int(force_new_model)
@@ -85,9 +86,10 @@ def train_with_mi(model,
             else:
                 run_number += 1
                 logger.info('Starting with a new clean model')
-
         else:
             model.load_state_dict(torch.load(f'{base_log_folder}/model_last.fl'))
+            logger.info(f'Loading "model_last.fl" at checkpoint {last_saved_epoch}')
+            start_epoch = last_saved_epoch + 1
     else:
         logger.info('No checkpoint file found, starting to train from scratch') 
         # with open(checkpoint_f, 'w') as f:
