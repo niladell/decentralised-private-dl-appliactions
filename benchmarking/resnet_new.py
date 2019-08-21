@@ -139,15 +139,15 @@ def resnet18():
     """
     return ResNet(BasicBlock, [2, 2, 2, 2])
 
-def resnet34():
+def resnet34(**kwargs):
     """ return a ResNet 34 object
     """
-    return ResNet(BasicBlock, [3, 4, 6, 3])
+    return ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
 
-def resnet50():
+def resnet50(**kwargs):
     """ return a ResNet 50 object
     """
-    return ResNet(BottleNeck, [3, 4, 6, 3])
+    return ResNet(BottleNeck, [3, 4, 6, 3], **kwargs)
 
 def resnet101():
     """ return a ResNet 101 object

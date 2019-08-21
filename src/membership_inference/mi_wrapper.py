@@ -110,7 +110,7 @@ def train_with_mi(model,
                 writer.add_image(tag, img, i)
         
         _save_sample_imgs(writer, train_dataloader, 'train_imgs')
-        _save_sample_imgs(writer, out_dataloader, 'out(test)_imgs')
+        _save_sample_imgs(writer, out_dataloader, 'out_imgs')
     save_sample_images(summary_writer, mi_train_loader, out_dataloader)
 
     # input_tensor = torch.Tensor(12, 3, 32, 32) #.to(device)
