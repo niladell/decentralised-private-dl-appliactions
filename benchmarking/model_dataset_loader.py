@@ -38,13 +38,16 @@ def get_dataset_and_model(dataset, model, batch_size, data_aug, num_workers=8):
         if num_classes == 100:
             import vgg_100
             target_net_type = lambda: vgg_100.vgg16_bn()
+        elif num_classes == 10:
+            import vgg
+            target_net_type = lambda: vgg.vgg16_bn()
     elif model_to_use == 'resnet-32':
         import resnet
         target_net_type = lambda: resnet.resnet32(num_classes=num_classes)
         resnet.test(target_net_type())
     elif model_to_use == 'resnet-34':
         import resnet_new as res
-        target_net_type = res.resnet34(num_classes=num_classes)
+        target_net_type = lambda: res.resnet34(num_classes=num_classes)
     elif model_to_use == 'resnet-50':
         if dataset_to_use == 'ImageNet':
                 batch_size = 32    # import resnet
@@ -134,7 +137,9 @@ def get_dataset_and_model(dataset, model, batch_size, data_aug, num_workers=8):
 def get_transforms(dataset_to_use: str, data_aug: bool):
     if dataset_to_use == 'CIFAR100':
         return _CIFAR100_transform(data_aug)
-    if dataset_to_use == 'ImageNet':
+    elif dataset_to_use == 'CIFAR10':
+        return _CIFAR10_transform(data_aug)
+    elif dataset_to_use == 'ImageNet':
         return _Imagenet_transform(data_aug)
     else:
         raise NotImplementedError(f'No transform for {dataset_to_use}')
@@ -169,16 +174,33 @@ def _Imagenet_transform(data_aug: bool):
 
 def _CIFAR10_transform(data_aug: bool):
     if data_aug:
-        raise NotImplementedError('No data aug implemented for CIFAR10')
-    train_transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-    ])
+        train_transform = transforms.Compose([
+            # transforms.ToPILImage(),
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomRotation(15),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.247, 0.2435, 0.2616))
+        ])
+        # dataset_to_use = f'{dataset_to_use}-wAug'
+        mi_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.247, 0.2435, 0.2616))
+        ])
+
+    else:
+        train_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.247, 0.2435, 0.2616))
+        ])
+        mi_transform = train_transform
 
     test_transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        transforms.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.247, 0.2435, 0.2616))
     ])
+
+    return train_transform, test_transform, mi_transform
 
 def _CIFAR100_transform(data_aug: bool):
     if data_aug:

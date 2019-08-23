@@ -33,7 +33,8 @@ def train_with_mi(model,
                   log_iteration = 100,
                   logger_name='logs',
                   force_new_model = True,
-                  mi_train_loader=None):
+                  mi_train_loader=None,
+                  topk=(1,5,20)):
     logger.info('Starting training')
     assert mi_train_loader is not None, NotImplementedError('No MI trainset loader defined') # TODO GIVE AUTO OPTION
 
@@ -77,7 +78,7 @@ def train_with_mi(model,
     if os.path.exists(checkpoint_f):
         with open(checkpoint_f, 'r') as f:
             last_saved_epoch = int(f.read())
-            logger.info('Checkpoint found: Epoch {last_saved_epoch}')
+            logger.info(f'Checkpoint found: Epoch {last_saved_epoch}')
 
         if last_saved_epoch == (epochs - 1) or force_new_model:
             if type(force_new_model) == str or force_new_model == int:

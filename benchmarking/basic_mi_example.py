@@ -173,6 +173,8 @@ except RuntimeError as e:
 target_loss = nn.CrossEntropyLoss()
 target_optim = optimizer(target_net.parameters(), lr=lr, **opt_kargs) # optim.SGD(target_net.parameters(), lr=lr, momentum=0.9)
 
+if dataset_to_use == 'CIFAR10':
+    topk=(1,)
 
 from src.membership_inference import mi_wrapper as mi
 logger.info('Start training')
@@ -191,4 +193,5 @@ mi.train_with_mi(model=target_net,
                 log_iteration = 50, start_epoch=0, 
                 logger_name=f'logs_new_0822/{dataset_to_use}/{model_to_use}-{dropout}/{optim_name}-{lr}',
                 force_new_model=clean_start,
-                mi_train_loader=mi_trainset_loader)
+                mi_train_loader=mi_trainset_loader,
+                topk=topk)

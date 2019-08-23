@@ -21,6 +21,9 @@ logger = logging.getLogger(__name__)
 logger.info("Python: %s" % sys.version)
 logger.info("Pytorch: %s" % torch.__version__)
 
+
+import dpsgd
+
 # determine device to run network on (runs on gpu if available)
 device= torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -80,7 +83,8 @@ optimizer_list = [('sgd', optim.SGD, {}),
                   ('sgd_momentum_wd-5e-3', optim.SGD, {'momentum': 0.9, 'weight_decay': 5e-3}),
                   ('adadelta', optim.Adadelta, {}),
                   ('rmsprop', optim.RMSprop, {'eps': 1e-5}),
-                  ('adam', optim.Adam, {'eps': 1e-5})]
+                  ('adam', optim.Adam, {'eps': 1e-5}),
+                  ('dp_sgd', dpsgd.DPSGD, {'batch_size': batch_size, 'C': 1, 'noise_multiplier': 1})]
 
 optim_name, optimizer, opt_kargs = optimizer_list[optimizer_set]
 
